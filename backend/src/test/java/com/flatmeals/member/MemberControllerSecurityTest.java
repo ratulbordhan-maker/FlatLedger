@@ -1,5 +1,7 @@
 package com.flatmeals.member;
 
+import com.flatmeals.security.AppUser;
+import com.flatmeals.security.Role;
 import com.flatmeals.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -123,6 +125,24 @@ class MemberControllerSecurityTest {
                         .content("{\"name\": \"   \"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.name").exists());
+    }
+
+    @Test
+    void memberCannotSeeTheListOfLogins() throws Exception {
+        mvc.perform(get("/api/members/logins").with(asMember()))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(memberService);
+    }
+
+    @Test
+    void managerSeesLoginsWithoutPasswordData() throws Exception {
+        when(memberService.logins()).thenReturn(List.of(new AppUser("srijila", "secret-hash", Role.MEMBER, 2L)));
+
+        mvc.perform(get("/api/members/logins").with(asManager()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].username").value("srijila"))
+                .andExpect(jsonPath("$[0].memberId").value(2))
+                .andExpect(jsonPath("$[0].passwordHash").doesNotExist());
     }
 
     @Test

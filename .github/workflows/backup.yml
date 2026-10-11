@@ -1,0 +1,45 @@
+# Daily database backup for Option B (Render + Aiven).
+#
+# Every night GitHub runs mysqldump against your Aiven database and keeps the
+# file for 30 days under the repository's Actions tab → "Database backup" → a run → Artifacts.
+#
+# Needs four repository secrets (Settings → Secrets and variables → Actions):
+#   DB_HOST, DB_PORT, DB_USER, DB_PASSWORD   (and optionally DB_NAME, default "defaultdb")
+#
+# IMPORTANT: keep this repository PRIVATE. Backups contain everyone's names and money.
+name: Database backup
+
+on:
+  schedule:
+    - cron: '0 21 * * *'   # 21:00 UTC = 03:00 in Dhaka
+  workflow_dispatch:        # adds a "Run workflow" button for a backup right now
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump the database
+        env:
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_NAME: ${{ secrets.DB_NAME || 'defaultdb' }}
+        run: |
+          set -euo pipefail
+          mkdir backup
+          FILE="backup/flatmeals-$(TZ=Asia/Dhaka date +%F).sql.gz"
+          mysqldump --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" \
+            --ssl-mode=REQUIRED --single-transaction --routines --triggers \
+            --no-tablespaces --set-gtid-purged=OFF "$DB_NAME" | gzip > "$FILE"
+          ls -lh backup
+
+      - name: Keep the backup for 30 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatmeals-backup
+          path: backup/
+          retention-days: 30

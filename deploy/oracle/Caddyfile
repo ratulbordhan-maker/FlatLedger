@@ -1,0 +1,8 @@
+# Caddy gets a free HTTPS certificate for your address automatically
+# and passes every visit on to the app on port 8080.
+# Replace the address with yours, then:
+#   sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+yourflat.duckdns.org {
+    encode gzip
+    reverse_proxy localhost:8080
+}

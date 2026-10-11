@@ -29,6 +29,7 @@ import java.util.List;
  * /api/members
  *
  *   GET    /api/members?status=ACTIVE          any logged-in user
+ *   GET    /api/members/logins                 MANAGER  who has a login (no passwords)
  *   GET    /api/members/{id}                   any logged-in user
  *   POST   /api/members                        MANAGER  add a member
  *   PUT    /api/members/{id}                   MANAGER  rename
@@ -52,6 +53,12 @@ public class MemberController {
     @GetMapping
     public List<MemberResponse> list(@RequestParam(name = "status", required = false) MemberStatus status) {
         return memberService.list(status).stream().map(MemberResponse::from).toList();
+    }
+
+    @GetMapping("/logins")
+    @PreAuthorize("hasRole('MANAGER')")
+    public List<LoginAccountResponse> logins() {
+        return memberService.logins().stream().map(LoginAccountResponse::from).toList();
     }
 
     @GetMapping("/{id}")

@@ -48,6 +48,12 @@ public class MemberService {
                 : memberRepository.findByStatusOrderByNameAsc(status);
     }
 
+    /** Every login account (no password data). Manager only. */
+    @Transactional(readOnly = true)
+    public List<AppUser> logins() {
+        return userRepository.findAll();
+    }
+
     @Transactional(readOnly = true)
     public Member get(Long id) {
         return memberRepository.findById(id)

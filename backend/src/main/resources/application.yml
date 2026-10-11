@@ -3,9 +3,10 @@ spring:
     name: flat-meal-manager
 
   # Connection to MySQL. Values can be overridden with environment variables,
-  # e.g. DB_PASSWORD=secret
+  # e.g. DB_PASSWORD=secret. DB_URL replaces the whole address at once
+  # (handy for hosted databases that need extra settings such as sslMode=REQUIRED).
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:flatmeals}?serverTimezone=Asia/Dhaka
+    url: ${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:flatmeals}?serverTimezone=Asia/Dhaka}
     username: ${DB_USER:flatmeals}
     password: ${DB_PASSWORD:flatmeals}
 
@@ -24,8 +25,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # The website files are served by SpaWebConfig, not by Spring Boot's default rules.
+  web:
+    resources:
+      add-mappings: false
+
 server:
-  port: 8080
+  # Hosting services such as Render tell the app which port to use through PORT.
+  port: ${PORT:8080}
 
 app:
   jwt:

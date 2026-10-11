@@ -16,3 +16,10 @@ Thumbs.db
 # Local secrets
 .env
 *.local
+
+# The built website is copied here by build.ps1 / the Dockerfile; never commit it
+backend/src/main/resources/static/
+
+# Database backups
+backups/
+*.sql.gz

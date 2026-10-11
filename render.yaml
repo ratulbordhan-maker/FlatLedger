@@ -1,0 +1,29 @@
+# Render "Blueprint": lets Render set up the web service from this file.
+# Secrets are marked sync: false, so Render asks you for them and they
+# never live in GitHub. See docs/DEPLOY.md, Option B.
+services:
+  - type: web
+    name: flat-meals
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MANAGER_NAME
+        sync: false
+      - key: MANAGER_USERNAME
+        sync: false
+      - key: MANAGER_PASSWORD
+        sync: false

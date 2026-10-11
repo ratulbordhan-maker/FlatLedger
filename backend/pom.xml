@@ -79,6 +79,8 @@
     </dependencies>
 
     <build>
+        <!-- Always build target/flat-meal-manager.jar, whatever the version number -->
+        <finalName>flat-meal-manager</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

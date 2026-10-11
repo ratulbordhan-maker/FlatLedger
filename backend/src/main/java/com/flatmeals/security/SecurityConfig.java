@@ -34,6 +34,8 @@ import java.nio.charset.StandardCharsets;
  *
  * Permissions are checked on the backend in two layers:
  *  - here: every /api/** URL needs a valid token (except login and health);
+ *    everything else is the website itself (HTML, JS, CSS, pictures), which
+ *    holds no data, so anyone may load it;
  *  - on controller methods: @PreAuthorize("hasRole('MANAGER')") for manager actions.
  * Hiding buttons in the frontend is only for convenience; it is never the protection.
  */
@@ -62,7 +64,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/api/auth/login", "/error").permitAll()
                         .requestMatchers("/api/**").authenticated()
-                        .anyRequest().denyAll())
+                        // The website files (see SpaWebConfig). They contain no flat data:
+                        // every number on screen comes from /api/**, which needs a token.
+                        .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();

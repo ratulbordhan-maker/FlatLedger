@@ -1,0 +1,36 @@
+# Settings used on the live server only.
+# Turn them on with the environment variable SPRING_PROFILES_ACTIVE=prod.
+# Anything set here replaces the same setting in application.yml.
+#
+# The secrets below have NO default on purpose: if one is missing,
+# the app refuses to start instead of quietly using a test value.
+
+spring:
+  datasource:
+    # Either set DB_URL (full address), or DB_HOST / DB_PORT / DB_NAME.
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      # A small flat needs only a few connections, and free databases limit them.
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+
+server:
+  # The app sits behind an HTTPS proxy (Caddy, Render, Cloudflare).
+  # This makes it trust the proxy's "the visitor used https" headers.
+  forward-headers-strategy: framework
+  # Don't show Java error details to visitors.
+  error:
+    include-stacktrace: never
+    include-message: never
+
+logging:
+  level:
+    root: WARN
+    com.flatmeals: INFO
+    org.springframework.boot.web.embedded: INFO
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  bootstrap:
+    manager-password: ${MANAGER_PASSWORD}

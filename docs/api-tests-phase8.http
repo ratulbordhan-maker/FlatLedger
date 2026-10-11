@@ -1,0 +1,35 @@
+### Phase 8 checks. Start the backend first (mvn spring-boot:run).
+### Click "Send Request" above each request.
+
+@base = http://localhost:8080
+
+### 1. Log in as the manager and copy the token from the answer
+# @name login
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "manager", "password": "changeme123" }
+
+###
+@token = {{login.response.body.token}}
+
+### 2. Download the month report as CSV (change 2026/10 to a month you have)
+#     Expect 200 and the text "Flat meal report" at the top
+GET {{base}}/api/months/2026/10/report.csv
+Authorization: Bearer {{token}}
+
+### 3. Same without a token: expect 401
+GET {{base}}/api/months/2026/10/report.csv
+
+### 4. Wrong password 6 times: the 6th answer is 429 "Too many wrong passwords"
+#     (send this request 6 times; then wait 15 minutes or restart the backend)
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "nobody-real", "password": "wrong" }
+
+### 5. After build.ps1 and java -jar: the website itself, and a deep link
+GET {{base}}/
+
+###
+GET {{base}}/m/2026/10/meals

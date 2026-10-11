@@ -1,0 +1,20 @@
+# Runs the app as a background service that starts on boot and restarts if it crashes.
+# Install:  sudo cp flatmeals.service /etc/systemd/system/
+#           sudo systemctl daemon-reload && sudo systemctl enable --now flatmeals
+# Logs:     sudo journalctl -u flatmeals -f
+[Unit]
+Description=Flat Meal Manager
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+User=flatmeals
+WorkingDirectory=/opt/flatmeals
+EnvironmentFile=/etc/flatmeals.env
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=50 -jar /opt/flatmeals/flat-meal-manager.jar
+Restart=on-failure
+RestartSec=10
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

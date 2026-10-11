@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, LoginAttemptLimiter.class})
 class AuthControllerTest {
 
     @Autowired
@@ -52,6 +52,21 @@ class AuthControllerTest {
                         .content("{\"username\": \"manager\", \"password\": \"wrong-password\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid username or password"));
+    }
+
+    @Test
+    void fiveWrongPasswordsLockThatUsernameForAWhile() throws Exception {
+        when(authService.login("anila", "guess"))
+                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password"));
+        String body = "{\"username\": \"anila\", \"password\": \"guess\"}";
+
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value("Too many wrong passwords. Try again in 15 minutes."));
     }
 
     @Test
