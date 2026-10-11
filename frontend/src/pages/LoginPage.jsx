@@ -38,7 +38,7 @@ export default function LoginPage() {
         <form className="login-form" onSubmit={handleSubmit}>
           <h1 className="login-title">
             <LeafMark className="brand-mark" />
-            Flat Meals
+            FlatLedger
           </h1>
           <p className="muted">Sign in to see this month’s meals and your account.</p>
 

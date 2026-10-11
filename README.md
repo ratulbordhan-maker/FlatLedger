@@ -1,4 +1,4 @@
-# Flat Meal Manager
+# FlatLedger
 
 Replaces the flat's monthly meal and expense spreadsheet: daily meals, the meal rate, everyone's dues, payments and flat cash, with full history.
 
@@ -57,7 +57,7 @@ java -jar backend\target\flat-meal-manager.jar    # then open http://localhost:8
 
 ## Going live
 
-Read `docs/DEPLOY.md`, then `docs/FIRST-MONTH.md`.
+For the Render + Aiven deployment path, follow `docs/DEPLOY.md` (Option B), then `docs/FIRST-MONTH.md`.
 
 - The live app runs with `SPRING_PROFILES_ACTIVE=prod`.
 - It refuses to start without your own `JWT_SECRET` and `MANAGER_PASSWORD`.

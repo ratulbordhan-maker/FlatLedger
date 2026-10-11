@@ -1,4 +1,4 @@
-# Putting Flat Meals online
+# Putting FlatLedger online
 
 This guide takes the app from your laptop to a real web address that everyone in the flat can open on their phone.
 
@@ -61,13 +61,16 @@ The live app **refuses to start** if either one is missing or still the example 
 
 ### 1.3 Put the code on GitHub (needed for B, handy for A)
 
-1. On github.com, click **New repository**, name it `flat-meal-manager`, and choose **Private**.
+1. On github.com, click **New repository**, name it `flatledger` (if available), and choose **Private**. Do not initialize it with a README, `.gitignore` or license.
 2. In PowerShell:
    ```powershell
    cd C:\flat-meal-manager
-   git remote add origin https://github.com/YOUR-NAME/flat-meal-manager.git
+   git add -A
+   git commit -m "Prepare FlatLedger deployment"
+   git remote add origin https://github.com/YOUR-NAME/flatledger.git
    git push -u origin master
    ```
+   Replace `YOUR-NAME` with your GitHub username. If Git says there is nothing to commit, continue. If `origin` is already configured, update it with `git remote set-url origin https://github.com/YOUR-NAME/flatledger.git` instead.
 The repository must stay **private**: for option B, the backups are stored with it.
 
 Your test data does **not** go online. The live database starts empty and gets its own tables and first manager on the first start. Once it's live, follow `docs/FIRST-MONTH.md` to enter your real starting balances.
@@ -239,7 +242,7 @@ Aiven may **power off a free database that hasn't been used for a while** and wi
 ### B2. The app on Render
 
 1. Sign up at **render.com** with your GitHub account.
-2. Click **New → Blueprint**, choose your `flat-meal-manager` repository, and Render reads `render.yaml`.
+2. Click **New → Blueprint**, choose your `flatledger` repository, and Render reads `render.yaml`. The Blueprint names the web service `flatledger`; Render may adjust its public URL if that name is already taken.
 3. It asks for the secret values:
 
    | Name | Value |
@@ -253,7 +256,7 @@ Aiven may **power off a free database that hasn't been used for a while** and wi
 
    `JWT_SECRET` is generated for you automatically.
 4. Click **Apply**. The first build takes 5–10 minutes. Follow it in **Logs** until you see `Started FlatMealsApplication`.
-5. Your app is at **https://flat-meals.onrender.com** (or a similar name shown at the top), with HTTPS already on.
+5. Open the URL shown for the `flatledger` web service in Render; it will be an HTTPS `onrender.com` address.
 
 About sleeping: after 15 minutes with no visitors, Render pauses the app. The next visit wakes it, which takes about a minute, and then it's quick again. Your data is safe; it lives in Aiven, not on Render.
 

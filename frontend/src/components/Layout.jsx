@@ -50,7 +50,7 @@ export default function Layout() {
       <header className="topbar">
         <Link to="/" className="brand">
           <LeafMark className="brand-mark" />
-          Flat Meals
+          FlatLedger
         </Link>
         {inMonth && (
           <MonthSwitcher months={months.data || []} year={Number(year)} month={Number(month)} section={section} />

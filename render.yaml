@@ -3,7 +3,7 @@
 # never live in GitHub. See docs/DEPLOY.md, Option B.
 services:
   - type: web
-    name: flat-meals
+    name: flatledger
     runtime: docker
     plan: free
     region: singapore
