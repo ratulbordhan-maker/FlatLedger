@@ -2,17 +2,18 @@ spring:
   application:
     name: flat-meal-manager
 
-  # Connection to the MySQL container from docker-compose.yml.
-  # Values can be overridden with environment variables, e.g. DB_PASSWORD=secret
+  # Connection to MySQL. Values can be overridden with environment variables,
+  # e.g. DB_PASSWORD=secret
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:flatmeals}?serverTimezone=Asia/Dhaka
     username: ${DB_USER:flatmeals}
     password: ${DB_PASSWORD:flatmeals}
 
   jpa:
-    # Flyway owns the schema. Hibernate only checks that entities match it.
+    # Flyway owns the schema (db/migration/*.sql). Hibernate never creates or
+    # changes tables. "none" also avoids false alarms about MySQL ENUM columns.
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
     properties:
       hibernate:
@@ -25,3 +26,18 @@ spring:
 
 server:
   port: 8080
+
+app:
+  jwt:
+    # Secret used to sign login tokens. Must be at least 32 characters.
+    # In production, ALWAYS set the JWT_SECRET environment variable instead.
+    secret: ${JWT_SECRET:dev-only-secret-change-me-before-deploying-0123456789}
+    # How long a login lasts before the user must log in again
+    expiry-hours: ${JWT_EXPIRY_HOURS:12}
+
+  # Used only on the very first start, when there are no users yet:
+  # creates a flat member + a MANAGER login for them.
+  bootstrap:
+    manager-name: ${MANAGER_NAME:Manager}
+    manager-username: ${MANAGER_USERNAME:manager}
+    manager-password: ${MANAGER_PASSWORD:changeme123}

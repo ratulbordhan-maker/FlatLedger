@@ -1,0 +1,168 @@
+### =====================================================================
+### Flat Meal Manager: manual API tests
+### Needs the VS Code extension "REST Client" (by Huachao Mao).
+### Click "Send Request" above each request, from top to bottom.
+### The backend must be running (mvn spring-boot:run).
+### =====================================================================
+
+@base = http://localhost:8080/api
+
+
+### 1. Health check (no login needed)
+GET {{base}}/health
+
+
+### 2. Log in as the first manager (created automatically on first start)
+# @name managerLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "manager",
+  "password": "changeme123"
+}
+
+@managerToken = {{managerLogin.response.body.token}}
+
+
+### 3. Who am I?
+GET {{base}}/auth/me
+Authorization: Bearer {{managerToken}}
+
+
+### 4. Change the manager password (do this once, then use the new one in step 2)
+# POST {{base}}/auth/change-password
+# Authorization: Bearer {{managerToken}}
+# Content-Type: application/json
+#
+# {
+#   "currentPassword": "changeme123",
+#   "newPassword": "a-much-better-password"
+# }
+
+
+### 5. Rename the manager's member record to your real name (member 1)
+PUT {{base}}/members/1
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "name": "Anila"
+}
+
+
+### 6. Add a member
+# @name addSrijila
+POST {{base}}/members
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "name": "Srijila",
+  "joinedOn": "2026-10-01"
+}
+
+@srijilaId = {{addSrijila.response.body.id}}
+
+
+### 7. Adding the same name again → 409 Conflict
+POST {{base}}/members
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "name": "srijila"
+}
+
+
+### 8. Blank name → 400 with a field error
+POST {{base}}/members
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "name": "   "
+}
+
+
+### 9. List all members
+GET {{base}}/members
+Authorization: Bearer {{managerToken}}
+
+
+### 10. Create a login for Srijila
+POST {{base}}/members/{{srijilaId}}/login
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "username": "srijila",
+  "password": "srijila-pass-123"
+}
+
+
+### 11. Log in as Srijila (a normal member)
+# @name memberLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "srijila",
+  "password": "srijila-pass-123"
+}
+
+@memberToken = {{memberLogin.response.body.token}}
+
+
+### 12. Members CAN see the member list → 200
+GET {{base}}/members
+Authorization: Bearer {{memberToken}}
+
+
+### 13. Members CANNOT add members → 403 Forbidden
+POST {{base}}/members
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+
+{
+  "name": "Sneaky"
+}
+
+
+### 14. Members CANNOT deactivate anyone → 403 Forbidden
+POST {{base}}/members/1/deactivate
+Authorization: Bearer {{memberToken}}
+
+
+### 15. No token at all → 401 Unauthorized
+GET {{base}}/members
+
+
+### 16. Wrong password → 401 with a message
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "srijila",
+  "password": "wrong-password"
+}
+
+
+### 17. Manager deactivates Srijila (history is kept)
+POST {{base}}/members/{{srijilaId}}/deactivate
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "leftOn": "2026-10-11"
+}
+
+
+### 18. Only active members
+GET {{base}}/members?status=ACTIVE
+Authorization: Bearer {{managerToken}}
+
+
+### 19. Bring Srijila back
+POST {{base}}/members/{{srijilaId}}/reactivate
+Authorization: Bearer {{managerToken}}
