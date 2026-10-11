@@ -1,0 +1,156 @@
+### =====================================================================
+### Phase 4: months and the meal grid
+### Click "Send Request" above each request, top to bottom.
+### If you changed the manager password, update it in step 1.
+### Member ids: the manager is usually 1 and Srijila 2. Step 3 shows the real ids.
+### =====================================================================
+
+@base = http://localhost:8080/api
+@srijilaId = 2
+
+
+### 1. Log in as the manager
+# @name managerLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "manager",
+  "password": "changeme123"
+}
+
+@managerToken = {{managerLogin.response.body.token}}
+
+
+### 2. Open October 2026 (the first month can be any month) → 201
+POST {{base}}/months
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "year": 2026,
+  "month": 10
+}
+
+
+### 3. Month details: who is in October? (check the member ids here)
+GET {{base}}/months/2026/10
+Authorization: Bearer {{managerToken}}
+
+
+### 4. The meal grid: 31 days, all 0.00 so far
+GET {{base}}/months/2026/10/meals
+Authorization: Bearer {{managerToken}}
+
+
+### 5. Save several cells at once → "changedCells": 4
+PUT {{base}}/months/2026/10/meals
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "entries": [
+    { "memberId": 1,             "date": "2026-10-01", "meals": 2 },
+    { "memberId": 1,             "date": "2026-10-02", "meals": 1 },
+    { "memberId": {{srijilaId}}, "date": "2026-10-01", "meals": 0.5 },
+    { "memberId": {{srijilaId}}, "date": "2026-10-02", "meals": 0.25 }
+  ]
+}
+
+
+### 6. Send the same values again → "changedCells": 0 (nothing changed, no audit row)
+PUT {{base}}/months/2026/10/meals
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "entries": [
+    { "memberId": 1, "date": "2026-10-01", "meals": 2 }
+  ]
+}
+
+
+### 7. Invalid meal value 0.3 → 400 (nothing saved)
+PUT {{base}}/months/2026/10/meals
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "entries": [
+    { "memberId": 1, "date": "2026-10-03", "meals": 0.3 }
+  ]
+}
+
+
+### 8. Date outside October → 400
+PUT {{base}}/months/2026/10/meals
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "entries": [
+    { "memberId": 1, "date": "2026-11-01", "meals": 2 }
+  ]
+}
+
+
+### 9. Live meal summary (no expenses yet, so the rate is 0 for now)
+GET {{base}}/months/2026/10/meal-summary
+Authorization: Bearer {{managerToken}}
+
+
+### 10. Skipping a month → 400 "The next month to open is November 2026"
+POST {{base}}/months
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "year": 2026,
+  "month": 12
+}
+
+
+### 11. All months
+GET {{base}}/months
+Authorization: Bearer {{managerToken}}
+
+
+### 12. Log in as Srijila
+# @name memberLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "srijila",
+  "password": "srijila-pass-123"
+}
+
+@memberToken = {{memberLogin.response.body.token}}
+
+
+### 13. Srijila CAN view the grid → 200
+GET {{base}}/months/2026/10/meals
+Authorization: Bearer {{memberToken}}
+
+
+### 14. Srijila CANNOT edit meals → 403
+PUT {{base}}/months/2026/10/meals
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+
+{
+  "entries": [
+    { "memberId": {{srijilaId}}, "date": "2026-10-05", "meals": 0 }
+  ]
+}
+
+
+### 15. Srijila CANNOT open months → 403
+POST {{base}}/months
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+
+{
+  "year": 2026,
+  "month": 11
+}

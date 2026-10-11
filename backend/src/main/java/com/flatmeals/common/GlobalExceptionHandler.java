@@ -1,5 +1,6 @@
 package com.flatmeals.common;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +62,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflict(ConflictException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    /**
+     * The database refused a change because it breaks a rule (e.g. two people
+     * saving the same meal cell at the same moment). Ask the user to retry.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return build(HttpStatus.CONFLICT, "This change clashes with existing data. Refresh and try again.");
     }
 
     /** Logged in, but not allowed (e.g. a member calling a manager-only endpoint). */
