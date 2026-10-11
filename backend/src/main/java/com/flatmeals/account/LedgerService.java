@@ -59,7 +59,7 @@ import java.util.Set;
  * Carry-forward: months are calculated in order, oldest first. Each month's
  * closing balances and closing cash become the next month's opening figures.
  * Opening balances are never stored as transactions, so nothing is counted twice.
- * (Phase 6 will freeze closed months as snapshots so old months aren't recalculated.)
+ * Closed months are read from their frozen snapshots, so they never change.
  *
  * All the arithmetic is done by the tested calculators in the calc package.
  */
@@ -80,12 +80,18 @@ public class LedgerService {
     private final CashCountRepository countRepository;
     private final CashAdjustmentRepository cashAdjustmentRepository;
     private final MemberRepository memberRepository;
+    private final MonthMemberSummaryRepository memberSummaryRepository;
+    private final MonthCashSummaryRepository cashSummaryRepository;
 
     public LedgerService(MonthService monthService, MonthRepository monthRepository, MealService mealService,
                          ExpenseRepository expenseRepository, PaymentRepository paymentRepository,
                          AdjustmentRepository adjustmentRepository, CashTransferRepository transferRepository,
                          CashReceiptRepository receiptRepository, CashCountRepository countRepository,
-                         CashAdjustmentRepository cashAdjustmentRepository, MemberRepository memberRepository) {
+                         CashAdjustmentRepository cashAdjustmentRepository, MemberRepository memberRepository,
+                         MonthMemberSummaryRepository memberSummaryRepository,
+                         MonthCashSummaryRepository cashSummaryRepository) {
+        this.memberSummaryRepository = memberSummaryRepository;
+        this.cashSummaryRepository = cashSummaryRepository;
         this.monthService = monthService;
         this.monthRepository = monthRepository;
         this.mealService = mealService;
@@ -142,7 +148,14 @@ public class LedgerService {
                 ledger.cashHolders(), totalCash, ledger.reconciliation());
     }
 
-    /** Calculates every month up to the requested one, carrying balances and cash forward. */
+    /**
+     * Calculates the requested month, carrying balances and cash forward from
+     * the months before it.
+     *
+     * Earlier CLOSED months are not recalculated: their frozen closing figures
+     * (written by MonthClosingService) are used directly. Earlier OPEN months
+     * are calculated live.
+     */
     @Transactional(readOnly = true)
     public MonthLedger ledgerFor(int year, int month) {
         FlatMonth target = monthService.find(year, month);
@@ -153,6 +166,12 @@ public class LedgerService {
             if (flatMonth.yearMonth().isAfter(target.yearMonth())) {
                 break;
             }
+            boolean isTarget = flatMonth.yearMonth().equals(target.yearMonth());
+            if (!isTarget && !flatMonth.isOpen()) {
+                balances = frozenBalances(flatMonth);
+                cash = frozenCash(flatMonth);
+                continue;
+            }
             ledger = computeMonth(flatMonth, balances, cash);
             balances = ledger.closingBalances();
             cash = ledger.closingCash();
@@ -161,6 +180,22 @@ public class LedgerService {
             throw new NotFoundException(target.label() + " could not be calculated");
         }
         return ledger;
+    }
+
+    private Map<Long, BigDecimal> frozenBalances(FlatMonth closedMonth) {
+        Map<Long, BigDecimal> balances = new HashMap<>();
+        for (MonthMemberSummary row : memberSummaryRepository.findByMonthId(closedMonth.getId())) {
+            balances.put(row.getMemberId(), row.getClosingBalance().setScale(2));
+        }
+        return balances;
+    }
+
+    private Map<Long, BigDecimal> frozenCash(FlatMonth closedMonth) {
+        Map<Long, BigDecimal> cash = new HashMap<>();
+        for (MonthCashSummary row : cashSummaryRepository.findByMonthId(closedMonth.getId())) {
+            cash.put(row.getHolderMemberId(), row.getClosingCash().setScale(2));
+        }
+        return cash;
     }
 
     // ------------------------------------------------------- one month's maths

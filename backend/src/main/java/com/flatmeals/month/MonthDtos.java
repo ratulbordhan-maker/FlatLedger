@@ -3,8 +3,12 @@ package com.flatmeals.month;
 import com.flatmeals.member.MemberDtos.MemberResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 /** The JSON shapes sent to and from the /api/months endpoints. */
@@ -22,17 +26,28 @@ public final class MonthDtos {
             @NotNull Long memberId) {
     }
 
+    /** Reopening a closed month always needs a reason, which goes in the audit log. */
+    public record ReopenMonthRequest(
+            @NotBlank @Size(max = 255) String reason) {
+    }
+
+    /** totalMeals, totalExpense, mealRate and closedAt are filled only when the month is CLOSED. */
     public record MonthResponse(
             Long id,
             int year,
             int month,
             String label,
             MonthStatus status,
-            int daysInMonth) {
+            int daysInMonth,
+            BigDecimal totalMeals,
+            BigDecimal totalExpense,
+            BigDecimal mealRate,
+            Instant closedAt) {
 
         public static MonthResponse from(FlatMonth month) {
             return new MonthResponse(month.getId(), month.getYear(), month.getMonthNumber(),
-                    month.label(), month.getStatus(), month.daysInMonth());
+                    month.label(), month.getStatus(), month.daysInMonth(),
+                    month.getTotalMeals(), month.getTotalExpense(), month.getMealRate(), month.getClosedAt());
         }
     }
 

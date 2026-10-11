@@ -1,0 +1,108 @@
+### =====================================================================
+### Phase 6: closing and reopening months
+### Uses the October 2026 test data from the Phase 4 and 5 files.
+### Update the manager password in step 1 if you changed it.
+### =====================================================================
+
+@base = http://localhost:8080/api
+@month = {{base}}/months/2026/10
+
+
+### 1. Log in as the manager
+# @name managerLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "username": "manager", "password": "changeme123" }
+
+@managerToken = {{managerLogin.response.body.token}}
+
+
+### 2. Close October → 200, "status": "CLOSED", with frozen totalMeals / totalExpense / mealRate
+POST {{month}}/close
+Authorization: Bearer {{managerToken}}
+
+
+### 3. Closing it again → 409 "already closed"
+POST {{month}}/close
+Authorization: Bearer {{managerToken}}
+
+
+### 4. Adding an expense to a closed month → 409 "October 2026 is closed"
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-20", "category": "Late groceries", "amount": 500,
+  "fundedBy": "FLAT_CASH", "holderMemberId": 1 }
+
+
+### 5. Editing meals in a closed month → 409
+PUT {{month}}/meals
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "entries": [ { "memberId": 1, "date": "2026-10-20", "meals": 2 } ] }
+
+
+### 6. Reports still work for closed months
+GET {{month}}/accounts
+Authorization: Bearer {{managerToken}}
+
+
+### 7. Open November
+POST {{base}}/months
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "year": 2026, "month": 11 }
+
+
+### 8. November accounts: each "openingBalance" = October's frozen closing balance
+GET {{base}}/months/2026/11/accounts
+Authorization: Bearer {{managerToken}}
+
+
+### 9. November cash starts with October's closing cash
+GET {{base}}/months/2026/11/cash
+Authorization: Bearer {{managerToken}}
+
+
+### 10. Reopen without a reason → 400
+POST {{month}}/reopen
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "reason": "" }
+
+
+### 11. Reopen October with a reason → 200, "status": "OPEN"
+POST {{month}}/reopen
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "reason": "Forgot to add the late groceries" }
+
+
+### 12. Now the late expense is accepted → 201
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-20", "category": "Late groceries", "amount": 500,
+  "fundedBy": "FLAT_CASH", "holderMemberId": 1 }
+
+
+### 13. Close October again → the meal rate now includes the 500
+POST {{month}}/close
+Authorization: Bearer {{managerToken}}
+
+
+### 14. November's opening balances have updated automatically
+GET {{base}}/months/2026/11/accounts
+Authorization: Bearer {{managerToken}}
+
+
+### 15. Closing November now → 409 "No meals" (nobody has eaten in November yet)
+POST {{base}}/months/2026/11/close
+Authorization: Bearer {{managerToken}}

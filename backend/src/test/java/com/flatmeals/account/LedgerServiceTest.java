@@ -48,6 +48,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -83,8 +85,11 @@ class LedgerServiceTest {
     @Mock private CashCountRepository countRepository;
     @Mock private CashAdjustmentRepository cashAdjustmentRepository;
     @Mock private MemberRepository memberRepository;
+    @Mock private MonthMemberSummaryRepository memberSummaryRepository;
+    @Mock private MonthCashSummaryRepository cashSummaryRepository;
 
     private LedgerService ledgerService;
+    private FlatMonth october;
 
     private static BigDecimal bd(String value) {
         return new BigDecimal(value);
@@ -103,9 +108,10 @@ class LedgerServiceTest {
     void setUp() {
         ledgerService = new LedgerService(monthService, monthRepository, mealService, expenseRepository,
                 paymentRepository, adjustmentRepository, transferRepository, receiptRepository,
-                countRepository, cashAdjustmentRepository, memberRepository);
+                countRepository, cashAdjustmentRepository, memberRepository,
+                memberSummaryRepository, cashSummaryRepository);
 
-        FlatMonth october = withId(new FlatMonth(2026, 10), OCT);
+        october = withId(new FlatMonth(2026, 10), OCT);
         FlatMonth november = withId(new FlatMonth(2026, 11), NOV);
         when(monthService.find(2026, 10)).thenReturn(october);
         when(monthService.find(2026, 11)).thenReturn(november);
@@ -225,6 +231,25 @@ class LedgerServiceTest {
 
         CashReportResponse novemberCash = ledgerService.cashReport(2026, 11);
         assertThat(novemberCash.totalCash()).isEqualByComparingTo("2000.00");
+    }
+
+    @Test
+    void closedMonthIsReadFromItsFrozenSnapshotNotRecalculated() {
+        // October has been closed: its frozen figures are deliberately different from the
+        // live ones, so we can tell which were used.
+        october.close(bd("135.75"), bd("12500.00"), bd("92.081031"), 1L);
+        when(memberSummaryRepository.findByMonthId(OCT)).thenReturn(List.of(
+                new MonthMemberSummary(OCT, A, bd("0"), bd("60"), bd("5524.86"), bd("5000"), bd("300"), bd("0"), bd("111.11")),
+                new MonthMemberSummary(OCT, B, bd("0"), bd("45.5"), bd("4189.69"), bd("4500"), bd("-200"), bd("0"), bd("-22.22"))));
+        when(cashSummaryRepository.findByMonthId(OCT)).thenReturn(List.of(
+                new MonthCashSummary(OCT, A, bd("0"), bd("0"), bd("0"), bd("999.00"))));
+
+        AccountsResponse november = ledgerService.accounts(2026, 11);
+
+        assertThat(accountOf(november, A).openingBalance()).isEqualByComparingTo("111.11");
+        assertThat(accountOf(november, B).openingBalance()).isEqualByComparingTo("-22.22");
+        assertThat(ledgerService.cashReport(2026, 11).totalCash()).isEqualByComparingTo("999.00");
+        verify(mealService, never()).getSummary(2026, 10);   // October was not recalculated
     }
 
     @Test

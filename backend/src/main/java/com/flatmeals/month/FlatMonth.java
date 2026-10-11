@@ -74,6 +74,26 @@ public class FlatMonth {
         return status == MonthStatus.OPEN;
     }
 
+    /** Freezes the month's headline figures and locks it against changes. */
+    public void close(BigDecimal totalMeals, BigDecimal totalExpense, BigDecimal mealRate, Long closedByUserId) {
+        this.status = MonthStatus.CLOSED;
+        this.totalMeals = totalMeals;
+        this.totalExpense = totalExpense;
+        this.mealRate = mealRate;
+        this.closedAt = Instant.now();
+        this.closedBy = closedByUserId;
+    }
+
+    /** Unlocks the month. The frozen figures are cleared (the audit log keeps them). */
+    public void reopen() {
+        this.status = MonthStatus.OPEN;
+        this.totalMeals = null;
+        this.totalExpense = null;
+        this.mealRate = null;
+        this.closedAt = null;
+        this.closedBy = null;
+    }
+
     public YearMonth yearMonth() {
         return YearMonth.of(year, monthNumber);
     }
