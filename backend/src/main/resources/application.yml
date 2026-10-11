@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: flat-meal-manager
+
+  # Connection to the MySQL container from docker-compose.yml.
+  # Values can be overridden with environment variables, e.g. DB_PASSWORD=secret
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:flatmeals}?serverTimezone=Asia/Dhaka
+    username: ${DB_USER:flatmeals}
+    password: ${DB_PASSWORD:flatmeals}
+
+  jpa:
+    # Flyway owns the schema. Hibernate only checks that entities match it.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Dhaka
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
