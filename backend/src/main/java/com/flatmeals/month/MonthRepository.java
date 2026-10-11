@@ -19,6 +19,9 @@ public interface MonthRepository extends JpaRepository<FlatMonth, Long> {
 
     List<FlatMonth> findAllByOrderByYearDescMonthNumberDesc();
 
+    /** Oldest first: used to carry balances forward month by month. */
+    List<FlatMonth> findAllByOrderByYearAscMonthNumberAsc();
+
     /**
      * Total of the month's expenses that count toward the meal rate.
      * Written as plain SQL because the expense screens arrive in Phase 5;

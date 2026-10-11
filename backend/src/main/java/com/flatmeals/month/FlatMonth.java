@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -84,6 +85,13 @@ public class FlatMonth {
 
     public int daysInMonth() {
         return yearMonth().lengthOfMonth();
+    }
+
+    /** Throws if the date is missing or falls outside this month. */
+    public void requireContains(LocalDate date, String fieldName) {
+        if (date == null || !YearMonth.from(date).equals(yearMonth())) {
+            throw new IllegalArgumentException(fieldName + " must be a date in " + label());
+        }
     }
 
     public Long getId() { return id; }

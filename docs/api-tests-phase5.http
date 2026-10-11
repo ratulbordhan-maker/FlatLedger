@@ -1,0 +1,197 @@
+### =====================================================================
+### Phase 5: expenses, payments, cash and personal accounts
+### Uses October 2026 (opened in the Phase 4 file). Send top to bottom.
+### Member ids: manager = 1, Srijila = 2 (check with GET /api/months/2026/10).
+### Update the manager password in step 1 if you changed it.
+### =====================================================================
+
+@base = http://localhost:8080/api
+@month = {{base}}/months/2026/10
+@managerId = 1
+@srijilaId = 2
+
+
+### 1. Log in as the manager
+# @name managerLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "username": "manager", "password": "changeme123" }
+
+@managerToken = {{managerLogin.response.body.token}}
+
+
+### ---------------- Starting figures copied from your spreadsheet ----------------
+
+### 2. Opening CASH: the manager already holds 1000 of flat cash
+POST {{month}}/cash/adjustments
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "holderMemberId": {{managerId}}, "amount": 1000, "type": "OPENING", "reason": "Cash in hand when we started the app" }
+
+
+### 3. Opening DUE: the manager owed 300 from last month's spreadsheet
+POST {{month}}/adjustments
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "memberId": {{managerId}}, "amount": 300, "type": "OPENING", "reason": "Due from September spreadsheet" }
+
+
+### 4. Opening CREDIT: Srijila had 200 credit (negative = credit)
+POST {{month}}/adjustments
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "memberId": {{srijilaId}}, "amount": -200, "type": "OPENING", "reason": "Credit from September spreadsheet" }
+
+
+### ---------------- Expenses ----------------
+
+### 5. Groceries paid from flat cash held by the manager → 201
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-05", "category": "Groceries", "description": "Weekly market",
+  "amount": 9000, "fundedBy": "FLAT_CASH", "holderMemberId": {{managerId}} }
+
+
+### 6. Same expense again → 409 "already exists ... allowDuplicate"
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-05", "category": "Groceries", "amount": 9000,
+  "fundedBy": "FLAT_CASH", "holderMemberId": {{managerId}} }
+
+
+### 7. Srijila buys fish with her OWN money → her account gets 2000 credit
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-08", "category": "Fish", "amount": 2000,
+  "fundedBy": "MEMBER_POCKET", "holderMemberId": {{srijilaId}} }
+
+
+### 8. A mistaken expense (we'll void it next)
+# @name mistake
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-09", "category": "Oops", "amount": 123.45,
+  "fundedBy": "FLAT_CASH", "holderMemberId": {{managerId}} }
+
+
+### 9. Void it with a reason (kept in history, no longer counted)
+POST {{month}}/expenses/{{mistake.response.body.id}}/void
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "reason": "Entered by mistake" }
+
+
+### 10. All expenses (the voided one shows "status": "VOIDED")
+GET {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+
+
+### ---------------- Payments and cash ----------------
+
+### 11. Srijila pays 4500, the manager receives the cash
+POST {{month}}/payments
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "memberId": {{srijilaId}}, "cashHolderId": {{managerId}}, "amount": 4500, "paidOn": "2026-10-10" }
+
+
+### 12. The manager pays her own share, 5000, and keeps the cash
+POST {{month}}/payments
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "memberId": {{managerId}}, "cashHolderId": {{managerId}}, "amount": 5000, "paidOn": "2026-10-10" }
+
+
+### 13. The manager hands 300 of flat cash to Srijila for vegetables (a transfer, not income or expense)
+POST {{month}}/cash/transfers
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "fromMemberId": {{managerId}}, "toMemberId": {{srijilaId}}, "amount": 300, "transferredOn": "2026-10-12" }
+
+
+### 14. Srijila spends 250 of that flat cash on vegetables
+POST {{month}}/expenses
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "expenseDate": "2026-10-12", "category": "Vegetables", "amount": 250,
+  "fundedBy": "FLAT_CASH", "holderMemberId": {{srijilaId}} }
+
+
+### 15. The manager counts her cash: 1150 in hand.
+###     Recorded should be 1000 + 4500 + 5000 - 9000 - 300 = 1200, so step 18 shows SHORT by 50.
+POST {{month}}/cash/counts
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "holderMemberId": {{managerId}}, "countedAmount": 1150, "note": "Counted at month end" }
+
+
+### ---------------- Reports ----------------
+
+### 16. Live meal rate (now uses the real expenses)
+GET {{month}}/meal-summary
+Authorization: Bearer {{managerToken}}
+
+
+### 17. Everyone's personal accounts (manager only)
+GET {{month}}/accounts
+Authorization: Bearer {{managerToken}}
+
+
+### 18. Cash per holder + reconciliation (recorded vs counted)
+GET {{month}}/cash
+Authorization: Bearer {{managerToken}}
+
+
+### ---------------- As Srijila ----------------
+
+### 19. Log in as Srijila
+# @name memberLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "username": "srijila", "password": "srijila-pass-123" }
+
+@memberToken = {{memberLogin.response.body.token}}
+
+
+### 20. Her own account → 200 (her credit includes the 2000 fish; the 50 cash she holds is NOT credit)
+GET {{month}}/accounts/me
+Authorization: Bearer {{memberToken}}
+
+
+### 21. Everyone's accounts → 403
+GET {{month}}/accounts
+Authorization: Bearer {{memberToken}}
+
+
+### 22. The manager's account → 403
+GET {{month}}/accounts/{{managerId}}
+Authorization: Bearer {{memberToken}}
+
+
+### 23. Payments list → 403
+GET {{month}}/payments
+Authorization: Bearer {{memberToken}}
+
+
+### 24. Shared expenses → 200 (everyone can see what the flat spent)
+GET {{month}}/expenses
+Authorization: Bearer {{memberToken}}
